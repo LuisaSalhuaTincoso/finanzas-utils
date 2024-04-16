@@ -49,7 +49,6 @@
                         <div class="message-body" v-html="message"></div>
                       </article>
                 </div>
-
                     <div class="box-border-result mt-5"  v-show="ganancia!=null">
                         <div class="box-result ">
                             <div >
@@ -66,10 +65,6 @@
                             </div>
                         </div>
                     </div>
-
-                
-
-               
               </div>
 
             </div>
