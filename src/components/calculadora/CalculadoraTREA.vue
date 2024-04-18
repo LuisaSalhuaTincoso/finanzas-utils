@@ -7,12 +7,17 @@
             <div class="columns">
               <div class="column is-half">
                 <div class="field mt-5">
-                    <label for="" class="label-size ">TREA%: 
+                    <label for="" class="label-size ">TREA %: 
                         <span class="icon" @click="mostrarInfo(1)">
                             <i class="fas fa-info-circle"></i>
                         </span>
                     </label>
-                        <input class="input is-success is-large" type="text" placeholder="Ingrese trea, ej: 6.75" v-model="trea" />
+                    <input class="input is-success is-large" type="text" placeholder="Ingrese trea, ej: 6.75" 
+                    v-model="v$.trea.$model" @keydown="checkDigitDecimal" />
+                    <div v-for="(error, index) in v$.trea.$errors" :key="index">
+                         <p class="help is-danger">{{ error.$message }}</p> 
+                    </div>
+                        
                 </div>
                 <div  class="mt-5">
                     <label >Monto: 
@@ -21,7 +26,8 @@
                         </span>
                     </label>
                     <div class="control">
-                        <input class="input is-success is-large" type="text" placeholder="Ingresa monto" v-model="monto" />
+                        <input class="input is-success is-large" type="text" placeholder="Ingresa monto"
+                             v-model="monto" @keydown="checkDigitDecimal"/>
                     </div>
                 </div>
                 <div  class="mt-5">
@@ -31,7 +37,8 @@
                         </span>
                     </label>
                     <div class="control">
-                        <input class="input is-success is-large" type="text" placeholder="Ingrese cantidad de dias" v-model="days" />
+                        <input class="input is-success is-large" type="text" placeholder="Ingrese cantidad de dias" 
+                            v-model.number="days" @keydown="checkDigit" />
                     </div>
                 </div>
                 <div class="control content-center mt-5">
@@ -44,7 +51,7 @@
                 </div>  
               </div>  
               <div class="column is-half">
-                <div class="mt-5" v-show="message!=null">
+                <div class="mt-5" v-show="message!=''">
                     <article class="message">
                         <div class="message-body" v-html="message"></div>
                       </article>
@@ -72,10 +79,11 @@
         </div>
     </div>
 </template>
-<script >
+<script lang="ts" >
 import { useVuelidate } from '@vuelidate/core'
 import { reactive, ref } from 'vue';
-import { required } from '@vuelidate/validators'
+import { decimal, numeric } from '@vuelidate/validators'
+import { required } from '@/utils/validators/i18n-validators';
 
 export default{
 setup(){
@@ -87,9 +95,9 @@ setup(){
     })
 
     const rules = {
-        trea:{ required},
-        monto:{ required },
-        days:{ required }
+        trea:{ required,decimal},
+        monto:{ required,decimal },
+        days:{ required,numeric }
     }
 
     const monto = ref()
@@ -98,19 +106,23 @@ setup(){
     const trea = ref()
     const message =ref("Importante la formula aplicada que se utiliza es la misma que se muestra en los documentos de ejemplos de cada entidad financiera peruana, que es la misma en todas las entidades, la misma que se probo en varios simuladores, en los que se vio una diferencia fue en el redondeo del segundo digito de los decimales.")
 
-    function calculateAtTheEnd() {
-    monto.value = parseFloat(monto.value)
-    days.value = parseFloat(days.value)
-    trea.value = parseFloat(trea.value)
+    async function calculateAtTheEnd() {
+        const result = await v$.value.$validate()
+        console.log(result, v$.value)
+        if(result) return;
+       // v$.$validate.value;
+        monto.value = parseFloat(monto.value)
+        days.value = parseFloat(days.value)
+        trea.value = parseFloat(trea.value)
 
-    let interes = Math.pow((100 + trea.value) / 100, days.value / 360)
+        let interes = Math.pow((100 + trea.value) / 100, days.value / 360)
 
-    ganancia.value = (interes - 1) * monto.value
-    ganancia.value = !isNaN(ganancia.value) ? ganancia.value.toFixed(3) : 0
-    message.value =null
+        ganancia.value = (interes - 1) * monto.value
+        ganancia.value = !isNaN(ganancia.value) ? ganancia.value.toFixed(3) : 0
+        message.value ="";
     }
 
-    function mostrarInfo(info){
+    function mostrarInfo(info:number){
         switch(info){        
             case(1): 
                 message.value="<b>TREA</b> Tasa de rendimiento efectivo anual, es la tasa que dispones cada entidad financiera, esta determina el rendimiento que se tendra como ganacia anual";
@@ -121,7 +133,7 @@ setup(){
             case(3): 
                 message.value="<b>Dias</b> que se considera tener el monto en la cuenta de ahorros o deposito a plazo fijo.<br> Cabe decir que la mayoria de entidades para el deposito a plazo fijo considera los: <ul> <li>180 dias -> 6 meses</li> <li>360 dias -> 1 año y no 365 dias</li> </ul>";
                 break;
-            default: this.message.value ="";
+            default: message.value ="";
         }
     }
 
@@ -132,8 +144,33 @@ setup(){
         days.value =null;
     }
 
+    const checkDigitDecimal = (event: KeyboardEvent) => {
+        if (event.key.length === 1 && (isNaN(Number(event.key)) && event.key != '.')) {
+            event.preventDefault();
+        }
+    };
+
+    const checkDigit = (event: KeyboardEvent) => {
+        if (event.key.length === 1 && isNaN(Number(event.key))) {
+            event.preventDefault();
+        }
+    };
+
     const v$= useVuelidate(rules,state)
-    return {state,v$,calculateAtTheEnd,mostrarInfo,reboot,monto,days,trea,ganancia,message}
+    return {
+        state,
+        v$,
+        calculateAtTheEnd,
+        mostrarInfo,
+        reboot,
+        monto,
+        days,
+        trea,
+        ganancia,
+        message,
+        checkDigit,
+        checkDigitDecimal
+    }
     }
 }
 </script>
@@ -141,7 +178,7 @@ setup(){
 <style scoped>
 
 .card-mine{
-    background-color: #8E24B4;
+    background-color: #742384;
     color:#FFFFFF;
     border-radius: 8px;
     display: flex;
@@ -180,7 +217,7 @@ setup(){
     align-items: center;
  }
  .box-border-result{
-    border:3px solid hsl(141, 71%, 48%);
+    border:3px solid #48c78e;
     border-radius: 8px;
     padding: 30px;
     text-align: center;
