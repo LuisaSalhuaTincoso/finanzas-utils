@@ -27,7 +27,10 @@
                     </label>
                     <div class="control">
                         <input class="input is-success is-large" type="text" placeholder="Ingresa monto"
-                             v-model="monto" @keydown="checkDigitDecimal"/>
+                        v-model="v$.monto.$model" @keydown="checkDigitDecimal"/>
+                        <div v-for="(error, index) in v$.monto.$errors" :key="index">
+                            <p class="help is-danger">{{ error.$message }}</p> 
+                       </div>
                     </div>
                 </div>
                 <div  class="mt-5">
@@ -38,7 +41,10 @@
                     </label>
                     <div class="control">
                         <input class="input is-success is-large" type="text" placeholder="Ingrese cantidad de dias" 
-                            v-model.number="days" @keydown="checkDigit" />
+                            v-model="v$.days.$model" @keydown="checkDigit" />
+                        <div v-for="(error, index) in v$.days.$errors" :key="index">
+                                <p class="help is-danger">{{ error.$message }}</p> 
+                         </div>
                     </div>
                 </div>
                 <div class="control content-center mt-5">
@@ -56,28 +62,30 @@
                         <div class="message-body" v-html="message"></div>
                       </article>
                 </div>
-                    <div class="box-border-result mt-5"  v-show="ganancia!=null">
-                        <div class="box-result ">
-                            <div >
-                                <label  for="">Monto Total:</label>
-                                <input class="input is-success is-large input-result" readonly v-model="ganancia" />
-                            </div>        
-                            <div class="mt-5">
-                                <label  for="">Ganancia total:</label>
-                                <input class="input is-success is-large input-result" readonly v-model="ganancia" />
-                            </div>
-                            <div class="mt-5" >
-                                <label  for="">Ganancia mensual:</label>
-                                <input class="input is-success is-large input-result" readonly v-model="ganancia" />
-                            </div>
+                <div class="box-border-result mt-5"  v-show="ganancia!=null">
+                    <div class="box-result ">
+                        <div >
+                            <label  for="">Monto Total:</label>
+                            <input class="input is-success is-large input-result" readonly v-model="ganancia" />
+                        </div>        
+                        <div class="mt-5">
+                            <label  for="">Ganancia total:</label>
+                            <input class="input is-success is-large input-result" readonly v-model="ganancia" />
                         </div>
+                        <div class="mt-5" >
+                            <label  for="">Ganancia mensual:</label>
+                            <input class="input is-success is-large input-result" readonly v-model="ganancia" />
+                        </div>                        
                     </div>
-              </div>
-
-            </div>
+                </div>
            
+               </div>           
+            </div>
+
         </div>
+           
     </div>
+
 </template>
 <script lang="ts" >
 import { useVuelidate } from '@vuelidate/core'
@@ -89,9 +97,9 @@ export default{
 setup(){
 
     const state = reactive({
-        trea:null,
-        monto:null,
-        days:null
+        trea:"",
+        monto:"",
+        days:""
     })
 
     const rules = {
@@ -109,13 +117,19 @@ setup(){
     async function calculateAtTheEnd() {
         const result = await v$.value.$validate()
         console.log(result, v$.value)
-        if(result) return;
+        //if(result) return;
        // v$.$validate.value;
-        monto.value = parseFloat(monto.value)
-        days.value = parseFloat(days.value)
-        trea.value = parseFloat(trea.value)
+        monto.value = parseFloat(v$.value.monto.$model)
+        days.value = parseFloat(v$.value.days.$model)
+        trea.value = parseFloat(v$.value.trea.$model)  
+
+     
+
+        console.log(monto.value, days.value, trea.value)
 
         let interes = Math.pow((100 + trea.value) / 100, days.value / 360)
+
+        console.log(interes)
 
         ganancia.value = (interes - 1) * monto.value
         ganancia.value = !isNaN(ganancia.value) ? ganancia.value.toFixed(3) : 0
@@ -125,7 +139,7 @@ setup(){
     function mostrarInfo(info:number){
         switch(info){        
             case(1): 
-                message.value="<b>TREA</b> Tasa de rendimiento efectivo anual, es la tasa que dispones cada entidad financiera, esta determina el rendimiento que se tendra como ganacia anual";
+                message.value="<b>TREA</b> Tasa de rendimiento efectivo anual, es la tasa que dispone cada entidad financiera, esta determina el rendimiento que se tendra como ganacia anual.<br> Cabe decir que la TREA para <b>cuentas de ahorros</b> no es <b>fija</b>, la entidad bancaria o financiera puede cambiarla según la coyuntura, mientras en un <b>deposito a plazo fijo </b> la tasa TREA no cambiara.";
                 break;
             case(2): 
                 message.value="<b>Monto</b> dinero ha simular independiente de la moneda sea soles o dolares, entre mayor cantidad mayor la ganancia. <br>Es importante saber si la TREA aplicada es para cualquier monto ya que si leemos un <b>Hasta</b> en la TREA de la entidad como <q>Hasta 6.25% TREA</q> aplique a sumas fuertes de dinero y montos como <q>s/5000</q> solo ofrescan un TREA 2.0% ";
@@ -139,9 +153,11 @@ setup(){
 
     function reboot(){
         ganancia.value =null;
-        monto.value=null;
-        trea.value=null;
-        days.value =null;
+        v$.value.monto.$model="";
+        v$.value.trea.$model="";
+        v$.value.days.$model="";
+        message.value ="Importante la formula aplicada que se utiliza es la misma que se muestra en los documentos de ejemplos de cada entidad financiera peruana, que es la misma en todas las entidades, la misma que se probo en varios simuladores, en los que se vio una diferencia fue en el redondeo del segundo digito de los decimales.";
+
     }
 
     const checkDigitDecimal = (event: KeyboardEvent) => {
@@ -157,6 +173,7 @@ setup(){
     };
 
     const v$= useVuelidate(rules,state)
+
     return {
         state,
         v$,
